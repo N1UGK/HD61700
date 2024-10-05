@@ -25,6 +25,11 @@ namespace HD61700
             _msSource = msSource;
         }
 
+        public string GetOutput()
+        {
+            return _sbOutput.ToString();
+        }
+
         public void Disassemble()
         {
             _sbOutput = new StringBuilder();
