@@ -1,4 +1,5 @@
 ﻿using CommandLine;
+using CommandLine.Text;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,10 +13,10 @@ using System.Threading.Tasks;
  * http://www.pisi.com.pl/piotr433/pb1000ee.htm
  * http://www.pisi.com.pl/piotr433/index.htm#pb1000
  * 
-Usage: HD61700.exe /i=infile.bin [/a=address] [/w] /o=outfile.txt
+Usage: HD61700.exe -i infile.bin [-a address] [-w] -o outfile.txt
 
-The optional starting address can be specified as a hexadecimal number without any prefixes. If omitted, a default value 0000 is assumed.
-The optional switch /w selects the 16-bit (word-size) memory access (applicaple for the microprocessor internal 16-bit ROM). If omitted, a default 8-bit (byte-size) memory access is assumed.
+The optional switch -a starting address can be specified as a hexadecimal number without any prefixes. If omitted, a default value 0000 is assumed.
+The optional switch -w selects the 16-bit (word-size) memory access (applicaple for the microprocessor internal 16-bit ROM). If omitted, a default 8-bit (byte-size) memory access is assumed.
 
  */
 
@@ -27,7 +28,16 @@ namespace HD61700
 
         static int Main(string[] args)
         {
-            Parser.Default.ParseArguments<Options>(args).WithParsed(RunOptions).WithNotParsed(HandleParseError);
+            ParserResult<Options> pResult = Parser.Default.ParseArguments<Options>(args).WithParsed(RunOptions).WithNotParsed(HandleParseError);           
+
+            if( _opts == null || pResult.Tag == ParserResultType.NotParsed)
+            {
+                HelpText hText = HelpText.AutoBuild(pResult);
+
+                Console.Write(hText.ToString());
+
+                return 1;
+            }
 
             if (!File.Exists(_opts.InputFile))
             {

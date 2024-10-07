@@ -13,6 +13,7 @@ namespace HD61700
         StringBuilder _sbOutput;
 
         string _newLine = "\r\n";
+        string _tab = "\t";
 
         MemoryStream _msSource;
 
@@ -33,6 +34,8 @@ namespace HD61700
         public void Disassemble()
         {
             _sbOutput = new StringBuilder();
+
+            _msSource.Position = 0;
 
             head = 0;
             tail = 0;
@@ -75,15 +78,15 @@ namespace HD61700
                 }
 
                 /* disassemble */
-                _sbOutput.Append(String.Format("%04X:\t", loc));
+                _sbOutput.Append(String.Format("{0:X4}:" + _tab, loc));
 
                 i = ScanMnemTab();
 
-                _sbOutput.Append(String.Format("%s", mnem[i].str));
+                _sbOutput.Append(mnem[i].str);
 
                 if (mnem[i].kind != mneumonic.NONE && mnem[i].kind != mneumonic.ILLOP)
                 {
-                    putchar('\t');
+                    putchar(_tab);
                 }
 
                 Arguments(i);
@@ -96,7 +99,7 @@ namespace HD61700
         /* variables */
         public uint loc;       /* location pointer */
         const int INBUFSIZE = 8;
-        uint[] inbuf; //INBUFSIZE
+        uint[] inbuf = new uint[INBUFSIZE]; //INBUFSIZE
         public uint head, tail;    /* indexes to the inbuf */
         public uint dsize; /* 1 if 8-bit memory access, 2 if 16-bit memory access */
 
@@ -143,6 +146,7 @@ namespace HD61700
             public string str { get; set; }
 
             private mneumonic _kind;
+
             public mneumonic kind
             {
                 get
@@ -539,17 +543,14 @@ namespace HD61700
                new string[] { "ia", "ie", "??", "tm" }
             };
 
-
         /* 16-bit register names */
         string[][] r16tab = {
     new string[] { "ix", "iy", "iz", "us" },
    new string[]{ "ss", "ky", "ky", "ky" }
         };
 
-
         /* specific register names */
         string[] sirtab = { "sx", "sy", "sz", "??" };
-
 
         uint FetchByte()
         {
@@ -565,7 +566,6 @@ namespace HD61700
             return inbuf[x];
         }
 
-
         /* returns the index to the 'mnem' table */
         uint ScanMnemTab()
         {
@@ -579,71 +579,74 @@ namespace HD61700
             return code;
         }
 
-
         void Imm3Arg(uint x)
         {
-            _sbOutput.Append(String.Format("%u", ((x >> 5) & 7) + 1));
+            //_sbOutput.Append(String.Format("%u", ((x >> 5) & 7) + 1)); //verify this
+            _sbOutput.Append(((x >> 5) & 7) + 1); 
         }
-
 
         void Imm5Arg(uint x)
         {
-            _sbOutput.Append(String.Format("&H%02X", x & 0x1F));
+            _sbOutput.Append(String.Format("&H{0:X2}", x & 0x1F));
         }
-
 
         void Imm7Arg()
         {
             uint x, y;
+
             y = loc;
+
             if (dsize > 1 && head == 2)
             {
                 FetchByte();
             }
-            x = FetchByte();
-            if ((x & 0x80) != 0)
-                x = 0x80 - x;
-            _sbOutput.Append(String.Format("&H%04X", x + y));
-        }
 
+            x = FetchByte();
+
+            if ((x & 0x80) != 0)
+            {
+                x = 0x80 - x;
+            }
+
+            _sbOutput.Append(String.Format("&H{0:X4}", x + y));
+        }
 
         void Imm8Arg()
         {
-            _sbOutput.Append(String.Format("&H%02X", FetchByte()));
+            _sbOutput.Append(String.Format("&H{0:X2}", FetchByte()));
         }
-
 
         void Imm16Arg()
         {
             uint x;
             x = FetchByte();
-            _sbOutput.Append(String.Format("&H%02X%02X", FetchByte(), x));
+            _sbOutput.Append(String.Format("&H{0:X2}{0:X2}", FetchByte(), x));
         }
-
 
         void AbsArg()
         {
             uint x;
+
             x = FetchByte();
+
             if (dsize > 1)
             {
                 FetchByte();
             }
-            _sbOutput.Append(String.Format("&H%02X%02X", FetchByte(), x));
-        }
 
+            _sbOutput.Append(String.Format("&H{0:X2}{0:X2}", FetchByte(), x));
+        }
 
         void RegArg(uint x)
         {
-            _sbOutput.Append(String.Format("$%u", x & 0x1F));
+            //_sbOutput.Append(String.Format("$%u", x & 0x1F)); //verify this
+            _sbOutput.Append("$" + (x & 0x1F)); //verify this
         }
-
 
         void SirArg(uint x)
         {
-            _sbOutput.Append(String.Format("%s", sirtab[(x >> 5) & 3]));
+            _sbOutput.Append(sirtab[(x >> 5) & 3]);
         }
-
 
         void ShortRegArg(uint x)
         {
@@ -657,7 +660,6 @@ namespace HD61700
                 SirArg(x);
             }
         }
-
 
         void ShortRegAr1(uint x, uint y)
         {
@@ -677,12 +679,15 @@ namespace HD61700
             _sbOutput.Append((char)c);
         }
 
+        void putchar(string c)
+        {
+            _sbOutput.Append(c);
+        }
 
         void IrArg(uint x)
         {
             putchar(((x & 1) == 0) ? 'x' : 'z');
         }
-
 
         void SignArg(uint x)
         {
@@ -707,16 +712,16 @@ namespace HD61700
             switch (mnem[index].kind)
             {
                 case mneumonic.CC:
-                    _sbOutput.Append(String.Format("%s", cctab[index & 7]));
+                    _sbOutput.Append(cctab[index & 7]);
                     break;
 
                 case mneumonic.JRCC:
-                    _sbOutput.Append(String.Format("%s,", cctab[index & 7]));
+                    _sbOutput.Append(cctab[index & 7]);
                     Imm7Arg();
                     break;
 
                 case mneumonic.JPCC:
-                    _sbOutput.Append(String.Format("%s,", cctab[index & 7]));
+                    _sbOutput.Append(cctab[index & 7]);
                     AbsArg();
                     break;
 
@@ -812,7 +817,7 @@ namespace HD61700
 
                 case mneumonic.R8IM8:
                     x = FetchByte();
-                    _sbOutput.Append(String.Format("%s,", r8tab[index & 1][(x >> 5) & 3]));
+                    _sbOutput.Append(r8tab[index & 1][(x >> 5) & 3]);
                     Imm8Arg();
                     break;
 
@@ -838,21 +843,21 @@ namespace HD61700
 
                 case mneumonic.R8REGJR:
                     x = FetchByte();
-                    _sbOutput.Append(String.Format("%s,", r8tab[index & 1][(x >> 5) & 3]));
+                    _sbOutput.Append(r8tab[index & 1][(x >> 5) & 3]);
                     RegArg(x);
                     OptionalJr(x);
                     break;
 
                 case mneumonic.R16REGJR:
                     x = FetchByte();
-                    _sbOutput.Append(String.Format("%s,", r16tab[index & 1][(x >> 5) & 3]));
+                    _sbOutput.Append(r16tab[index & 1][(x >> 5) & 3]);
                     RegArg(x);
                     OptionalJr(x);
                     break;
 
                 case mneumonic.R16IM16:
                     x = FetchByte();
-                    _sbOutput.Append(String.Format("%s,", r16tab[index & 1][(x >> 5) & 3]));
+                    _sbOutput.Append(r16tab[index & 1][(x >> 5) & 3]);
                     Imm16Arg();
                     break;
 
@@ -937,7 +942,8 @@ namespace HD61700
                 case mneumonic.SIRIM5:
                     x = FetchByte();
                     SirArg(x);
-                    _sbOutput.Append(String.Format(",%u", x & 0x1F));
+                    //_sbOutput.Append(String.Format(",%u", x & 0x1F)); //verify this
+                    _sbOutput.Append(x & 0x1F);
                     break;
 
                 default:
