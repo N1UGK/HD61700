@@ -13,4 +13,10 @@ Usage: HD61700.exe -i infile.bin [-a address] [-w] -o outfile.txt
 The optional switch -a starting address can be specified as a hexadecimal number without any prefixes. If omitted, a default value 0000 is assumed.
 The optional switch -w selects the 16-bit (word-size) memory access (applicaple for the microprocessor internal 16-bit ROM). If omitted, a default 8-bit (byte-size) memory access is assumed.
 
+In Visual Studio you can set the Debug Options in the Project Properties to:
+
+-i ..\..\resources\rom1.bin -o output.txt
+
+This will disassemble the included ROM image and output the result in the Bin folder.
+
 I can be contacted ar jbertier@arrl.net
