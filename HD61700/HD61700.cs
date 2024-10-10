@@ -19,11 +19,13 @@ namespace HD61700
 
         public enum BitSize { bits8, bits16 };
 
-        public Disassembler(BitSize size, MemoryStream msSource)
+        public Disassembler(BitSize size, MemoryStream msSource, uint startingAddress = 0)
         {
             dsize = (uint)(size == BitSize.bits8 ? 1 : 2);
 
             _msSource = msSource;
+
+            loc = startingAddress;
         }
 
         public string GetOutput()
@@ -620,7 +622,7 @@ namespace HD61700
         {
             uint x;
             x = FetchByte();
-            _sbOutput.Append(String.Format("&H{0:X2}{0:X2}", FetchByte(), x));
+            _sbOutput.Append(String.Format("&H{0:X2}{1:X2}", FetchByte(), x));
         }
 
         void AbsArg()
@@ -634,7 +636,7 @@ namespace HD61700
                 FetchByte();
             }
 
-            _sbOutput.Append(String.Format("&H{0:X2}{0:X2}", FetchByte(), x));
+            _sbOutput.Append(String.Format("&H{0:X2}{1:X2}", FetchByte(), x));
         }
 
         void RegArg(uint x)
