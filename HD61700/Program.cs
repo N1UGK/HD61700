@@ -13,7 +13,9 @@ using System.Threading.Tasks;
  * http://www.pisi.com.pl/piotr433/pb1000ee.htm
  * http://www.pisi.com.pl/piotr433/index.htm#pb1000
  * 
-Usage: HD61700.exe -i infile.bin [-a address] [-w] -o outfile.txt
+Usage: HD61700.exe -i infile.bin [-a address] [-w] -o outfile.txt 
+
+Example: HD61700.exe -i infile.bin -a 0x8000 -o outfile.txt 
 
 The optional switch -a starting address can be specified as a hexadecimal number without any prefixes. If omitted, a default value 0000 is assumed.
 The optional switch -w selects the 16-bit (word-size) memory access (applicaple for the microprocessor internal 16-bit ROM). If omitted, a default 8-bit (byte-size) memory access is assumed.
@@ -46,6 +48,19 @@ namespace HD61700
                 return 2;
             }
 
+            uint address = 0;
+
+            try
+            {
+                address = UInt32.Parse(_opts.Address.Replace("0x",string.Empty).Replace("0X",string.Empty), System.Globalization.NumberStyles.HexNumber);
+            }
+            catch
+            {
+                Console.WriteLine($"Address {_opts.Address} was not in hex or integer format.");
+
+                return 3;
+            }
+
             Disassembler d;
 
             using (FileStream fs = new FileStream(_opts.InputFile, FileMode.Open))
@@ -54,7 +69,7 @@ namespace HD61700
 
                 fs.CopyTo(ms);
 
-                d = new Disassembler(_opts.WordSize == true ? Disassembler.BitSize.bits16 : Disassembler.BitSize.bits8, ms);
+                d = new Disassembler(_opts.WordSize == true ? Disassembler.BitSize.bits16 : Disassembler.BitSize.bits8, ms, address);
 
                 d.Disassemble();
             }
