@@ -13,7 +13,13 @@ namespace HD61700
         StringBuilder _sbOutput;
 
         string _newLine = "\r\n";
-        string _tab = "\t";
+        char _spacer = ' ';
+
+        //holds bytes for the current "line"
+        List<uint> _lstBytes = new List<uint>();
+
+        public bool mneumonicUpper = true;
+        public bool outputBytes = true;
 
         MemoryStream _msSource;
 
@@ -51,7 +57,7 @@ namespace HD61700
                 /* align the "head" index */
                 while (head % dsize != 0)
                 {
-                    FetchByte();
+                    FetchByte(false);
                 }
 
                 /* shift the bytes in the inbuf */
@@ -79,19 +85,34 @@ namespace HD61700
                     inbuf[tail++] = (uint)x;
                 }
 
+                //clear the buffer for byte output
+                _lstBytes = new List<uint>();
+
                 /* disassemble */
-                _sbOutput.Append(String.Format("{0:X4}:" + _tab, loc));
+                string line = String.Format("{0:X4}:" + _spacer, loc);
 
                 i = ScanMnemTab();
 
-                _sbOutput.Append(mnem[i].str);
+                line += doUpperConditional(mnem[i].str);
 
                 if (mnem[i].kind != mneumonic.NONE && mnem[i].kind != mneumonic.ILLOP)
                 {
-                    putchar(_tab);
+                    line += _spacer;
                 }
 
-                Arguments(i);
+                line += Arguments(i);
+
+                if( outputBytes )
+                {
+                    foreach ( uint b in _lstBytes )
+                    {
+                        _sbOutput.Append(String.Format("{0:X2}", b));
+                    }
+
+                    _sbOutput.Append("".PadRight(9-(_lstBytes.Count*2),_spacer));
+                }
+
+                _sbOutput.Append(line);
 
                 _sbOutput.Append(_newLine);
 
@@ -146,7 +167,7 @@ namespace HD61700
         public class tab
         {
             public string str { get; set; }
-
+    
             private mneumonic _kind;
 
             public mneumonic kind
@@ -540,21 +561,15 @@ namespace HD61700
         string[] cctab = { "z", "nc", "lz", "uz", "nz", "c", "nlz" };
 
         /* 8-bit register names */
-        string[][] r8tab = {
-                new string[] { "pe", "pd", "ib", "ua" },
-               new string[] { "ia", "ie", "??", "tm" }
-            };
+        string[][] r8tab = { new string[] { "pe", "pd", "ib", "ua" }, new string[] { "ia", "ie", "??", "tm" } };
 
         /* 16-bit register names */
-        string[][] r16tab = {
-    new string[] { "ix", "iy", "iz", "us" },
-   new string[]{ "ss", "ky", "ky", "ky" }
-        };
+        string[][] r16tab = { new string[] { "ix", "iy", "iz", "us" }, new string[]{ "ss", "ky", "ky", "ky" } };
 
         /* specific register names */
         string[] sirtab = { "sx", "sy", "sz", "??" };
 
-        uint FetchByte()
+        uint FetchByte( bool addToByteOutput=true)
         {
             uint x;
 
@@ -564,6 +579,9 @@ namespace HD61700
             {
                 loc++;
             }
+
+            //add this to the byte output
+            if(addToByteOutput) _lstBytes.Add(inbuf[x]);
 
             return inbuf[x];
         }
@@ -581,51 +599,61 @@ namespace HD61700
             return code;
         }
 
-        void Imm3Arg(uint x)
+        string Imm3Arg(uint x)
         {
-            //_sbOutput.Append(String.Format("%u", ((x >> 5) & 7) + 1)); //verify this
-            _sbOutput.Append(((x >> 5) & 7) + 1); 
+            //can be minimum 1 and maximum 8
+            return (((x >> 5) & 7) + 1).ToString(); 
         }
 
-        void Imm5Arg(uint x)
+        string Imm5Arg(uint x)
         {
-            _sbOutput.Append(String.Format("&H{0:X2}", x & 0x1F));
+            return String.Format("&H{0:X2}", x & 0x1F);
         }
 
-        void Imm7Arg()
+        string Imm7Arg()
         {
-            uint x, y;
+            uint y, x;
 
             y = loc;
 
+            sbyte offset;
+            sbyte sign = 1;
+
             if (dsize > 1 && head == 2)
             {
-                FetchByte();
+                FetchByte(false);
             }
 
             x = FetchByte();
+
+            offset = (sbyte)(x & 0x7F);
 
             if ((x & 0x80) != 0)
             {
                 x = 0x80 - x;
+
+                sign = -1;
             }
 
-            _sbOutput.Append(String.Format("&H{0:X4}", x + y));
+            //relative value first, then calculated (actual) value next
+            return String.Format((sign < 0 ? "-" : "") + "&H{0:X2} (&H{1:X4})", offset, x + y);
         }
 
-        void Imm8Arg()
+        string Imm8Arg()
         {
-            _sbOutput.Append(String.Format("&H{0:X2}", FetchByte()));
+            return String.Format("&H{0:X2}", FetchByte());
         }
 
-        void Imm16Arg()
+        string Imm16Arg()
         {
             uint x;
+
             x = FetchByte();
-            _sbOutput.Append(String.Format("&H{0:X2}{1:X2}", FetchByte(), x));
+
+            return String.Format("&H{0:X2}{1:X2}", FetchByte(), x);
         }
 
-        void AbsArg()
+        string AbsArg()
         {
             uint x;
 
@@ -633,324 +661,336 @@ namespace HD61700
 
             if (dsize > 1)
             {
-                FetchByte();
+                FetchByte(false);
             }
 
-            _sbOutput.Append(String.Format("&H{0:X2}{1:X2}", FetchByte(), x));
+            return String.Format("&H{0:X2}{1:X2}", FetchByte(), x);
         }
 
-        void RegArg(uint x)
+        string RegArg(uint x)
         {
             //_sbOutput.Append(String.Format("$%u", x & 0x1F)); //verify this
-            _sbOutput.Append("$" + (x & 0x1F)); //verify this
+            return ("$" + (x & 0x1F)); //verify this
         }
 
-        void SirArg(uint x)
+        string SirArg(uint x)
         {
-            _sbOutput.Append(sirtab[(x >> 5) & 3]);
+           return doUpperConditional(sirtab[(x >> 5) & 3]);
         }
 
-        void ShortRegArg(uint x)
+        string ShortRegArg(uint x)
         {
+            string returnString = string.Empty;
+
             if ((x & 0x60) == 0x60)
             {
-                RegArg(FetchByte());
+                returnString += RegArg(FetchByte());
             }
             else
             {
-                _sbOutput.Append('$');
-                SirArg(x);
+                returnString += '$';
+
+                returnString += SirArg(x);
             }
+
+            return returnString;
         }
 
-        void ShortRegAr1(uint x, uint y)
+        string ShortRegAr1(uint x, uint y)
         {
+            string returnString = string.Empty;
+
             if ((x & 0x60) == 0x60)
             {
-                RegArg(y);
+                returnString += RegArg(y);
             }
             else
             {
-                _sbOutput.Append('$');
-                SirArg(x);
+                returnString += '$';
+
+                returnString += SirArg(x);
             }
+
+            return returnString;
         }
 
-        void putchar(uint c)
+        string IrArg(uint x)
         {
-            _sbOutput.Append((char)c);
+            return (x & 1) == 0 ? "x" : "z";
         }
 
-        void putchar(string c)
+        string SignArg(uint x)
         {
-            _sbOutput.Append(c);
+            return (x & 0x80) != 0 ? "-" : "+";
         }
 
-        void IrArg(uint x)
+        string OptionalJr(uint x)
         {
-            putchar(((x & 1) == 0) ? 'x' : 'z');
-        }
+            string returnString = string.Empty;
 
-        void SignArg(uint x)
-        {
-            putchar(((x & 0x80) != 0) ? '-' : '+');
-        }
-
-        void OptionalJr(uint x)
-        {
             if ((x & 0x80) != 0)
             {
-                _sbOutput.Append(",jr ");
+                returnString += doUpperConditional(",jr ");
 
-                Imm7Arg();
+                returnString += Imm7Arg();
             }
 
+            return returnString;
         }
 
-        void Arguments(uint index)
+        private string doUpperConditional(string input)
         {
+            return mneumonicUpper ? input.ToUpper() : input;
+        }
+
+        string Arguments(uint index)
+        {
+            string returnValue = string.Empty;
+
             uint x, y;
 
             switch (mnem[index].kind)
             {
                 case mneumonic.CC:
-                    _sbOutput.Append(cctab[index & 7]);
+                    returnValue += doUpperConditional(cctab[index & 7]);
                     break;
 
                 case mneumonic.JRCC:
-                    _sbOutput.Append(cctab[index & 7]);
+                    returnValue += doUpperConditional(cctab[index & 7]);
                     Imm7Arg();
                     break;
 
                 case mneumonic.JPCC:
-                    _sbOutput.Append(cctab[index & 7]);
-                    AbsArg();
+                    returnValue += doUpperConditional(cctab[index & 7]);
+                    returnValue += AbsArg();
                     break;
 
                 case mneumonic.JR:
-                    Imm7Arg();
+                    returnValue += Imm7Arg();
                     break;
 
                 case mneumonic.JP:
-                    AbsArg();
+                    returnValue += AbsArg();
                     break;
 
                 case mneumonic.REGREGJR:
                     x = FetchByte();
-                    RegArg(x);
-                    putchar(',');
-                    ShortRegArg(x);
-                    OptionalJr(x);
+                    returnValue += RegArg(x);
+                    returnValue += ',';
+                    returnValue += ShortRegArg(x);
+                    returnValue += OptionalJr(x);
                     break;
 
                 case mneumonic.REGDIRJR:
                     x = FetchByte();
-                    RegArg(x);
-                    _sbOutput.Append(",(");
-                    ShortRegArg(x);
-                    putchar(')');
-                    OptionalJr(x);
+                    returnValue += RegArg(x);
+                    returnValue += ",(";
+                    returnValue += ShortRegArg(x);
+                    returnValue += ')';
+                    returnValue += OptionalJr(x);
                     break;
 
                 case mneumonic.REGJR:
                     x = FetchByte();
-                    RegArg(x);
-                    OptionalJr(x);
+                    returnValue += RegArg(x);
+                    returnValue += OptionalJr(x);
                     break;
 
                 case mneumonic.REGIRR:
                     x = FetchByte();
-                    RegArg(x);
-                    _sbOutput.Append(",(i");
-                    IrArg(index);
-                    SignArg(x);
-                    ShortRegArg(x);
-                    putchar(')');
+                    returnValue += RegArg(x);
+                    returnValue += ",(i";
+                    returnValue += IrArg(index);
+                    returnValue += SignArg(x);
+                    returnValue += ShortRegArg(x);
+                    returnValue += ')';
                     break;
 
                 case mneumonic.REGIRRIM3:
                     x = FetchByte();
                     y = FetchByte();
-                    RegArg(x);
-                    _sbOutput.Append(",(i");
-                    IrArg(index);
-                    SignArg(x);
-                    ShortRegAr1(x, y);
-                    _sbOutput.Append("),");
-                    Imm3Arg(y);
+                    returnValue += RegArg(x);
+                    returnValue += ",(i";
+                    returnValue += IrArg(index);
+                    returnValue += SignArg(x);
+                    returnValue += ShortRegAr1(x, y);
+                    returnValue += "),";
+                    returnValue += Imm3Arg(y);
                     break;
 
                 case mneumonic.REG:
-                    RegArg(FetchByte());
+                    returnValue += RegArg(FetchByte());
                     break;
 
                 case mneumonic.DIR:
-                    putchar('(');
-                    RegArg(FetchByte());
-                    putchar(')');
+                    returnValue += '(';
+                    returnValue += RegArg(FetchByte());
+                    returnValue += ')';
                     break;
 
                 case mneumonic.IRRREG:
                     x = FetchByte();
-                    _sbOutput.Append("(i");
-                    IrArg(index);
-                    SignArg(x);
-                    ShortRegArg(x);
-                    _sbOutput.Append("),");
-                    RegArg(x);
+                    returnValue += "(i";
+                    returnValue += IrArg(index);
+                    returnValue += SignArg(x);
+                    returnValue += ShortRegArg(x);
+                    returnValue += "),";
+                    returnValue += RegArg(x);
                     break;
 
                 case mneumonic.REGIM8JR:
                     x = FetchByte();
-                    RegArg(x);
-                    putchar(',');
-                    Imm8Arg();
-                    OptionalJr(x);
+                    returnValue += RegArg(x);
+                    returnValue += ',';
+                    returnValue += Imm8Arg();
+                    returnValue += OptionalJr(x);
                     break;
 
                 case mneumonic.IM8:
-                    Imm8Arg();
+                    returnValue += Imm8Arg();
                     break;
 
                 case mneumonic.IM8A:
                     FetchByte();
-                    Imm8Arg();
+                    returnValue += Imm8Arg();
                     break;
 
                 case mneumonic.R8IM8:
                     x = FetchByte();
-                    _sbOutput.Append(r8tab[index & 1][(x >> 5) & 3]);
-                    Imm8Arg();
+                    returnValue += doUpperConditional(r8tab[index & 1][(x >> 5) & 3]);
+                    returnValue += Imm8Arg();
                     break;
 
                 case mneumonic.REGIRI:
                     x = FetchByte();
-                    RegArg(x);
-                    _sbOutput.Append(",(i");
-                    IrArg(index);
-                    SignArg(x);
-                    Imm8Arg();
-                    putchar(')');
+                    returnValue += RegArg(x);
+                    returnValue += ",(i";
+                    returnValue += IrArg(index);
+                    returnValue += SignArg(x);
+                    returnValue += Imm8Arg();
+                    returnValue += ')';
                     break;
 
                 case mneumonic.IRIREG:
                     x = FetchByte();
-                    _sbOutput.Append("(i");
-                    IrArg(index);
-                    SignArg(x);
-                    Imm8Arg();
-                    _sbOutput.Append("),");
-                    RegArg(x);
+                    returnValue += "(i";
+                    returnValue += IrArg(index);
+                    returnValue += SignArg(x);
+                    returnValue += Imm8Arg();
+                    returnValue += "),";
+                    returnValue += RegArg(x);
                     break;
 
                 case mneumonic.R8REGJR:
                     x = FetchByte();
-                    _sbOutput.Append(r8tab[index & 1][(x >> 5) & 3]);
-                    RegArg(x);
-                    OptionalJr(x);
+                    returnValue += doUpperConditional(r8tab[index & 1][(x >> 5) & 3]);
+                    returnValue += RegArg(x);
+                    returnValue += OptionalJr(x);
                     break;
 
                 case mneumonic.R16REGJR:
                     x = FetchByte();
-                    _sbOutput.Append(r16tab[index & 1][(x >> 5) & 3]);
-                    RegArg(x);
-                    OptionalJr(x);
+                    returnValue += doUpperConditional(r16tab[index & 1][(x >> 5) & 3]);
+                    returnValue += RegArg(x);
+                    returnValue += OptionalJr(x);
                     break;
 
                 case mneumonic.R16IM16:
                     x = FetchByte();
-                    _sbOutput.Append(r16tab[index & 1][(x >> 5) & 3]);
-                    Imm16Arg();
+                    returnValue += doUpperConditional(r16tab[index & 1][(x >> 5) & 3]);
+                    returnValue += Imm16Arg();
                     break;
 
                 case mneumonic.IM8IND:
                     x = FetchByte();
-                    Imm8Arg();
-                    _sbOutput.Append(",($");
-                    SirArg(x);
-                    putchar(')');
+                    returnValue += Imm8Arg();
+                    returnValue = ",($";
+                    returnValue += SirArg(x);
+                    returnValue += ')';
                     break;
 
                 case mneumonic.IM16IND:
                     x = FetchByte();
-                    Imm16Arg();
-                    _sbOutput.Append(",($");
-                    SirArg(x);
-                    putchar(')');
+                    returnValue += Imm16Arg();
+                    returnValue += ",($";
+                    returnValue += SirArg(x);
+                    returnValue += ')';
                     break;
 
                 case mneumonic.RRIM3JR:
                     x = FetchByte();
                     y = FetchByte();
-                    RegArg(x);
-                    putchar(',');
-                    ShortRegAr1(x, y);
-                    putchar(',');
-                    Imm3Arg(y);
-                    OptionalJr(x);
+                    returnValue += RegArg(x);
+                    returnValue += ',';
+                    returnValue += ShortRegAr1(x, y);
+                    returnValue += ',';
+                    returnValue += Imm3Arg(y);
+                    returnValue += OptionalJr(x);
                     break;
 
                 case mneumonic.RIM5IM3JR:
                     x = FetchByte();
                     y = FetchByte();
-                    RegArg(x);
-                    putchar(',');
-                    Imm5Arg(y);
-                    putchar(',');
-                    Imm3Arg(y);
-                    OptionalJr(x);
+                    returnValue += RegArg(x);
+                    returnValue += ',';
+                    returnValue += Imm5Arg(y);
+                    returnValue += ',';
+                    returnValue += Imm3Arg(y);
+                    returnValue += OptionalJr(x);
                     break;
 
                 case mneumonic.REGIM8:
                     x = FetchByte();
-                    RegArg(x);
-                    putchar(',');
-                    Imm8Arg();
+                    returnValue += RegArg(x);
+                    returnValue += ',';
+                    returnValue += Imm8Arg();
                     break;
 
                 case mneumonic.REGIM16:
                     x = FetchByte();
-                    RegArg(x);
-                    putchar(',');
-                    Imm16Arg();
+                    returnValue += RegArg(x);
+                    returnValue += ',';
+                    returnValue += Imm16Arg();
                     break;
 
                 case mneumonic.REGIM3:
                     x = FetchByte();
                     y = FetchByte();
-                    RegArg(x);
-                    putchar(',');
-                    Imm3Arg(y);
+                    returnValue += RegArg(x);
+                    returnValue += ',';
+                    returnValue += Imm3Arg(y);
                     break;
 
                 case mneumonic.SIRREGJR:
                     x = FetchByte();
-                    SirArg(x);
-                    putchar(',');
-                    RegArg(x);
-                    OptionalJr(x);
+                    returnValue += SirArg(x);
+                    returnValue += ',';
+                    returnValue += RegArg(x);
+                    returnValue += OptionalJr(x);
                     break;
 
                 case mneumonic.SIRREGIM3:
                     x = FetchByte();
                     y = FetchByte();
-                    SirArg(x);
-                    putchar(',');
-                    RegArg(x);
-                    putchar(',');
-                    Imm3Arg(y);
+                    returnValue += SirArg(x);
+                    returnValue += ',';
+                    returnValue += RegArg(x);
+                    returnValue += ',';
+                    returnValue += Imm3Arg(y);
                     break;
 
                 case mneumonic.SIRIM5:
                     x = FetchByte();
                     SirArg(x);
                     //_sbOutput.Append(String.Format(",%u", x & 0x1F)); //verify this
-                    _sbOutput.Append(x & 0x1F);
+                    returnValue += (x & 0x1F);
                     break;
 
                 default:
                     break;
             }
+
+            return returnValue;
         }
     }
 }
