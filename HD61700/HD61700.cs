@@ -21,6 +21,20 @@ namespace HD61700
         public bool mneumonicUpper = true;
         public bool outputBytes = true;
 
+        // location pointer 
+        public uint loc;       
+
+        const int INBUFSIZE = 8;
+
+        uint[] inbuf = new uint[INBUFSIZE];
+
+        //indexes to the inbuf 
+        public uint head, tail;
+
+        //1 if 8-bit memory access, 2 if 16-bit memory access 
+        public uint dsize; 
+
+        //holds the source bytes 
         MemoryStream _msSource;
 
         public enum BitSize { bits8, bits16 };
@@ -118,13 +132,6 @@ namespace HD61700
 
             } while (tail != 0);
         }
-
-        /* variables */
-        public uint loc;       /* location pointer */
-        const int INBUFSIZE = 8;
-        uint[] inbuf = new uint[INBUFSIZE]; //INBUFSIZE
-        public uint head, tail;    /* indexes to the inbuf */
-        public uint dsize; /* 1 if 8-bit memory access, 2 if 16-bit memory access */
 
         public enum mneumonic : uint
         {
@@ -617,7 +624,6 @@ namespace HD61700
             y = loc;
 
             sbyte offset;
-            sbyte sign = 1;
 
             if (dsize > 1 && head == 2)
             {
@@ -631,12 +637,10 @@ namespace HD61700
             if ((x & 0x80) != 0)
             {
                 x = 0x80 - x;
-
-                sign = -1;
             }
 
             //relative value first, then calculated (actual) value next
-            return String.Format((sign < 0 ? "-" : "") + "&H{0:X2} (&H{1:X4})", offset, x + y);
+            return String.Format(SignArg(x) + "&H{0:X2} (&H{1:X4})", offset, x + y);
         }
 
         string Imm8Arg()
@@ -716,7 +720,7 @@ namespace HD61700
 
         string IrArg(uint x)
         {
-            return (x & 1) == 0 ? "x" : "z";
+            return doUpperConditional((x & 1) == 0 ? "x" : "z");
         }
 
         string SignArg(uint x)
@@ -799,7 +803,7 @@ namespace HD61700
                 case mneumonic.REGIRR:
                     x = FetchByte();
                     returnValue += RegArg(x);
-                    returnValue += ",(i";
+                    returnValue += doUpperConditional(",(i");
                     returnValue += IrArg(index);
                     returnValue += SignArg(x);
                     returnValue += ShortRegArg(x);
@@ -810,7 +814,7 @@ namespace HD61700
                     x = FetchByte();
                     y = FetchByte();
                     returnValue += RegArg(x);
-                    returnValue += ",(i";
+                    returnValue += doUpperConditional(",(i");
                     returnValue += IrArg(index);
                     returnValue += SignArg(x);
                     returnValue += ShortRegAr1(x, y);
@@ -864,7 +868,7 @@ namespace HD61700
                 case mneumonic.REGIRI:
                     x = FetchByte();
                     returnValue += RegArg(x);
-                    returnValue += ",(i";
+                    returnValue += doUpperConditional(",(i");
                     returnValue += IrArg(index);
                     returnValue += SignArg(x);
                     returnValue += Imm8Arg();
