@@ -71,6 +71,9 @@ namespace HD61700
 
                 d = new Disassembler(_opts.WordSize == true ? Disassembler.BitSize.bits16 : Disassembler.BitSize.bits8, ms, address);
 
+                d.mneumonicUpper = _opts.MneumonicsUpper;
+                d.outputBytes = _opts.OutputBytes;
+
                 d.Disassemble();
             }
 
@@ -92,6 +95,12 @@ namespace HD61700
 
             [Option('w', "word", Default=false, Required = false, HelpText = "Selects the 16-bit (word-size) memory access (applicaple for the microprocessor internal 16-bit ROM). If omitted, a default 8-bit (byte-size) memory access is assumed.")]
             public bool WordSize { get; set; }
+
+            [Option('u', "uppercase", Default = true, Required = false, HelpText = "If true, outputs all mneumonics in upper case.")]
+            public bool MneumonicsUpper { get; set; }
+
+            [Option('b', "output bytes", Default = true, Required = false, HelpText = "If true, outputs the bytes for the current line.")]
+            public bool OutputBytes { get; set; }
         }
 
         static void RunOptions(Options opts)
