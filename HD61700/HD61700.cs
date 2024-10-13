@@ -761,7 +761,7 @@ namespace HD61700
 
                 case mneumonic.JRCC:
                     returnValue += doUpperConditional(cctab[index & 7]);
-                    Imm7Arg();
+                    returnValue += Imm7Arg();
                     break;
 
                 case mneumonic.JPCC:
@@ -985,7 +985,7 @@ namespace HD61700
 
                 case mneumonic.SIRIM5:
                     x = FetchByte();
-                    SirArg(x);
+                    returnValue += SirArg(x);
                     //_sbOutput.Append(String.Format(",%u", x & 0x1F)); //verify this
                     returnValue += (x & 0x1F);
                     break;
