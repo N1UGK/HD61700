@@ -57,6 +57,8 @@
     <None Include="Resources\pb1000_command_reference.pdf" />
     <None Include="Resources\rom1.bin" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Content Include="Resources\Casio PB-1000 HD61700 Assembler.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
