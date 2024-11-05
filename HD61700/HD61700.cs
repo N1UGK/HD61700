@@ -888,14 +888,14 @@ namespace HD61700
                 case mneumonic.R8REGJR:
                     x = FetchByte();
                     returnValue += doUpperConditional(r8tab[index & 1][(x >> 5) & 3]);
-                    returnValue += RegArg(x);
+                    returnValue += "," + RegArg(x);
                     returnValue += OptionalJr(x);
                     break;
 
                 case mneumonic.R16REGJR:
                     x = FetchByte();
                     returnValue += doUpperConditional(r16tab[index & 1][(x >> 5) & 3]);
-                    returnValue += RegArg(x);
+                    returnValue += " " + RegArg(x);
                     returnValue += OptionalJr(x);
                     break;
 
