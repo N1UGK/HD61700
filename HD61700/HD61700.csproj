@@ -53,8 +53,8 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
-    <None Include="Resources\PB1000technicalreference.pdf" />
-    <None Include="Resources\pb1000_command_reference.pdf" />
+    <None Include="Resources\PB1000_technical_reference.pdf" />
+    <None Include="Resources\PB1000_command_reference.pdf" />
     <None Include="Resources\rom1.bin" />
   </ItemGroup>
   <ItemGroup>
