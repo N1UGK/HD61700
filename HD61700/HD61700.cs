@@ -763,6 +763,7 @@ namespace HD61700
 
                 case mneumonic.JRCC:
                     returnValue += doUpperConditional(cctab[index & 7]);
+                    returnValue += ",";
                     returnValue += Imm7Arg();
                     break;
 
