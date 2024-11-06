@@ -17,8 +17,8 @@ Example: HD61700.exe -i infile.bin -a 0x8000 -o outfile.txt
 
 In Visual Studio you can set the Debug Options in the Project Properties to:
 
--i ..\..\resources\rom1.bin -o output.txt -a 0x8000
+-i ..\..\resources\pb1000_rom.bin -o output.txt -a 0x8000
 
-This will disassemble the included ROM image and output the result in the Bin folder.
+This will disassemble the included ROM image and output the result in the Bin folder with a base address of 0x8000.
 
 I can be contacted ar jbertier@arrl.net
