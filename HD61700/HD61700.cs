@@ -768,6 +768,7 @@ namespace HD61700
 
                 case mneumonic.JPCC:
                     returnValue += doUpperConditional(cctab[index & 7]);
+                    returnValue += ",";
                     returnValue += AbsArg();
                     break;
 
