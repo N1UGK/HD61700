@@ -645,7 +645,9 @@ namespace HD61700
 
         string Imm8Arg()
         {
-            return String.Format("&H{0:X2}", FetchByte());
+            uint b = FetchByte();
+
+            return String.Format("&H{0:X2} ({1})", b, Convert.ToString(b, 2).PadLeft(8, '0'));
         }
 
         string Imm16Arg()
@@ -888,14 +890,14 @@ namespace HD61700
                 case mneumonic.R8REGJR:
                     x = FetchByte();
                     returnValue += doUpperConditional(r8tab[index & 1][(x >> 5) & 3]);
-                    returnValue += RegArg(x);
+                    returnValue += "," + RegArg(x);
                     returnValue += OptionalJr(x);
                     break;
 
                 case mneumonic.R16REGJR:
                     x = FetchByte();
                     returnValue += doUpperConditional(r16tab[index & 1][(x >> 5) & 3]);
-                    returnValue += RegArg(x);
+                    returnValue += " " + RegArg(x);
                     returnValue += OptionalJr(x);
                     break;
 
