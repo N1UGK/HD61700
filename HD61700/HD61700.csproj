@@ -59,6 +59,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\Casio PB-1000 HD61700 Assembler.txt" />
+    <Content Include="Resources\output_example.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
