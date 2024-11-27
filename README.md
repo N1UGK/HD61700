@@ -21,4 +21,4 @@ In Visual Studio you can set the Debug Options in the Project Properties to:
 
 This will disassemble the included ROM image and output the result in the Bin folder with a base address of 0x8000.
 
-I can be contacted ar jbertier@arrl.net
+I can be contacted at jbertier@arrl.net
