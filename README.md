@@ -21,4 +21,6 @@ In Visual Studio you can set the Debug Options in the Project Properties to:
 
 This will disassemble the included ROM image and output the result in the Bin folder with a base address of 0x8000.
 
+Note that I have found an additional version of the ROM and added this to the project as well, pb1000_rom2.bin and its corresponding output_example2.txt.
+
 I can be contacted at jbertier@arrl.net
