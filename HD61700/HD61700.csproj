@@ -53,12 +53,15 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="Resources\PB1000_rom2.bin" />
     <None Include="Resources\PB1000_technical_reference.pdf" />
     <None Include="Resources\PB1000_command_reference.pdf" />
     <None Include="Resources\PB1000_rom.bin" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\Casio PB-1000 HD61700 Assembler.txt" />
+    <Content Include="Resources\output_example.txt" />
+    <Content Include="Resources\output_example2.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
